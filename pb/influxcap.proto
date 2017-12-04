@@ -1,0 +1,12 @@
+syntax="proto3";
+
+package pb;
+
+message JoinRequest {
+    string id = 1;
+    string url = 2;
+}
+
+message BeatRequest {
+    string timestamp = 1;
+}
