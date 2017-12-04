@@ -1,21 +1,21 @@
 package base
 
-// DBNode container actions about each node
-type DBNode interface {
+// RaftNode container actions about each node
+type RaftNode interface {
 	Start() error
 	Stop() error
 	Status() *NodeStatus
 }
 
-// DBCluster container actions about a cluster
-type DBCluster interface {
+// RaftCluster container actions about a cluster
+type RaftCluster interface {
 	Join() error
 	Quit() error
 	Status() *ClusterStatus
 }
 
 // InfluxNode provides infrastructure of a influxdb instance
-// it implements DBNode interface
+// it implements RaftNode interface
 type InfluxNode struct {
 	ID      uint64
 	Name    string
@@ -47,7 +47,7 @@ func NewInfluxNode(c *Config) *InfluxNode {
 }
 
 // InfluxCluster provides infrastructure a cluster instance
-// it implements DBCluster interface
+// it implements RaftCluster interface
 type InfluxCluster struct {
 	// cluster name
 	Name   string
@@ -69,9 +69,12 @@ type NodeStatus struct {
 type Status string
 
 const (
-	// RUNNING say the cluster is working now
+	// RUNNING say the cluster or node is working now
 	RUNNING Status = "running"
 
-	// DOWNNING say all the cluster nodes was down
+	// DOWNNING say  the cluster or one node was down
 	DOWNNING Status = "downning"
+
+	// INACTIVE saysthe cluster or one node was inactive
+	INACTIVE Status = "inactive"
 )
