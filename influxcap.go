@@ -4,6 +4,7 @@ import (
 	"flag"
 
 	_ "github.com/coreos/etcd/raft"
+	"github.com/lwhile/influxcap/service"
 )
 
 var (
@@ -15,4 +16,10 @@ var (
 func main() {
 	flag.Parse()
 
+	serverConf := service.ServerConf{
+		Port: *portFlag,
+	}
+	server := service.NewServer(&serverConf)
+
+	server.Start()
 }

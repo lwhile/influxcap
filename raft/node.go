@@ -1,6 +1,7 @@
 package raft
 
 import "github.com/lwhile/influxcap/backend"
+import "github.com/coreos/etcd/raft"
 
 const (
 	// RUNNING status
@@ -17,11 +18,19 @@ type Raft interface {
 // Status type
 type Status string
 
+// NodeConf is config of a Node
+type NodeConf struct {
+	ID    string
+	Peers []string
+	Join  bool
+}
+
 // Node is a influxcap instance,
 // which be implemented as a raft node(Raft interface)
 type Node struct {
 	ID     string   `json:"id"`
 	Status Status   `json:"status"`
+	Join   bool     `json:"join"`
 	Peers  []string `json:"peers"`
 
 	proposeC <-chan string
@@ -30,14 +39,22 @@ type Node struct {
 
 	stopC   chan struct{}
 	Backend *backend.Influxdb
+
+	// Field below is relating to raft library
+
+	// etcd raft node interface for the commit/error channel
+	node raft.Node
+
+	storage *raft.MemoryStorage
 }
 
-// NodeConf is config of a Node
-type NodeConf struct {
+// Start a raft node
+func (n *Node) Start() error {
+	return nil
 }
 
 // NewNode return a Raft Node
-func NewNode(ID string) *Node {
+func NewNode(conf *NodeConf) *Node {
 	proposeC := make(chan string)
 	commitC := make(chan string)
 	errorC := make(chan error)
@@ -45,7 +62,9 @@ func NewNode(ID string) *Node {
 	backend := backend.NewInfluxBackend()
 
 	return &Node{
-		ID:       ID,
+		ID:       conf.ID,
+		Peers:    conf.Peers,
+		Join:     conf.Join,
 		proposeC: proposeC,
 		commitC:  commitC,
 		errorC:   errorC,
