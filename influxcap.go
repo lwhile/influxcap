@@ -32,5 +32,8 @@ func main() {
 	}
 	server := service.NewServer(&serverConf)
 
-	server.Start()
+	if err := server.Start(); err != nil {
+		log.Fatal(err)
+	}
+
 }
