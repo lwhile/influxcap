@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	idFlag   = flag.Uint64("id", 0, "node id")
+	idFlag   = flag.Int("id", 0, "node id")
 	confFlag = flag.String("conf", "conf.yml", "config file path")
 	joinFlag = flag.Bool("join", false, "join a influxcap cluster")
 	portFlag = flag.String("port", "4928", "http listen port")
@@ -24,7 +24,7 @@ func main() {
 		ID:   *idFlag,
 		Join: *joinFlag,
 	}
-	node := node.New(*nodeConf)
+	node := node.New(&nodeConf)
 	node.Start()
 
 	serverConf := service.ServerConf{
