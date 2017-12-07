@@ -88,6 +88,9 @@ func (n *Node) Start() {
 		MaxInflightMsgs: 256,
 	}
 	// Invoke raft library to start a raft node
+	if n.Join {
+		peers = nil
+	}
 	n.node = raft.StartNode(&raftConf, peers)
 
 	// TODO: About node status
@@ -138,6 +141,9 @@ func (n *Node) serverChannels() {
 		select {
 		case <-ticker.C:
 			n.node.Tick()
+		case rd := <-n.node.Ready():
+			n.storage.Append(rd.Entries)
+			n.transport.Send(rd.Messages)
 		}
 	}
 }

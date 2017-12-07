@@ -23,6 +23,7 @@ func NewServer(conf *ServerConf) *Server {
 // Start a http server
 // this method will be blocked
 func (s *Server) Start() error {
+	s.server.Addr = ":" + s.conf.Port
 	return s.server.ListenAndServe()
 }
 
