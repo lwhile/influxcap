@@ -4,7 +4,7 @@ import "net/http"
 
 // ServerConf contain config of a http server
 type ServerConf struct {
-	Port string
+	Addr string
 }
 
 // Server http request
@@ -24,7 +24,7 @@ func NewServer(conf *ServerConf) *Server {
 // Start a http server
 // this method will be blocked
 func (s *Server) Start() error {
-	s.server.Addr = ":" + s.conf.Port
+	s.server.Addr = s.conf.Addr
 	return s.server.ListenAndServe()
 }
 

@@ -4,8 +4,12 @@ import (
 	"flag"
 	"strings"
 
+	"io/ioutil"
+
 	"github.com/lwhile/influxcap/node"
+	"github.com/lwhile/influxcap/service"
 	"github.com/lwhile/log"
+	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -17,13 +21,32 @@ var (
 )
 
 type config struct {
+	Addr        string `yaml:"addr"`
+	Name        string `yaml:"name"`
+	InfluxdbURL string `yaml:"influxdb_url"`
+}
+
+func parseConfig(path string) (*config, error) {
+	b, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	conf := config{}
+	err = yaml.Unmarshal(b, &conf)
+	return &conf, err
 }
 
 func main() {
 	flag.Parse()
 
-	if *idFlag == 0 {
-		log.Fatal("node ID must no be zero")
+	if *confFlag == "" {
+		log.Fatal("must specific a path of config file")
+	}
+
+	// parse the running config
+	conf, err := parseConfig(*confFlag)
+	if err != nil {
+		log.Fatalf("influxcap: Failed to parse a config file (%v)", err)
 	}
 
 	nodeConf := node.Conf{
@@ -37,14 +60,14 @@ func main() {
 	}
 	node.Start()
 
-	// serverConf := service.ServerConf{
-	// 	Port: *portFlag,
-	// }
-	// server := service.NewServer(&serverConf)
+	serverConf := service.ServerConf{
+		Port: conf.Addr,
+	}
+	server := service.NewServer(&serverConf)
 
-	// if err := server.Start(); err != nil {
-	// 	log.Fatal(err)
-	// }
+	if err := server.Start(); err != nil {
+		log.Fatal(err)
+	}
 
 	select {}
 }
