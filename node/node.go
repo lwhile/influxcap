@@ -97,7 +97,6 @@ func (n *Node) Start() {
 	if n.Join {
 		peers = nil
 	}
-	log.Info("peers:", peers)
 	n.node = raft.StartNode(&raftConf, peers)
 
 	// TODO: About node status
@@ -117,7 +116,6 @@ func (n *Node) Start() {
 	for i := range n.Peers {
 		if i+1 != n.ID {
 			n.transport.AddPeer(types.ID(i+1), []string{n.Peers[i]})
-			log.Info("*:", []string{n.Peers[i]})
 		}
 	}
 
@@ -165,6 +163,8 @@ func (n *Node) serverChannels() {
 	}
 }
 
+// serverRaft used to open a http port to communicate
+// with each raft node by raft protocol.
 func (n *Node) serverRaft() {
 	url, err := url.Parse(n.Peers[n.ID-1])
 	if err != nil {
@@ -174,7 +174,16 @@ func (n *Node) serverRaft() {
 	if err != nil {
 		log.Fatalf("influxcap: Failed to listen rafthttp (%v)", err)
 	}
+
+	// will blocked if run well
 	err = (&http.Server{Handler: n.transport.Handler()}).Serve(ln)
+
+	select {
+	case <-n.httpStopC:
+	default:
+		log.Fatalf("influxcap: Failed to serve rafthttp (%v)", err)
+	}
+	close(n.httpDoneC)
 }
 
 // PublishEntries writes commited log entries to commit channel

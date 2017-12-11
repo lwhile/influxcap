@@ -16,15 +16,14 @@ var (
 	clusterFlag = flag.String("cluster", "", "cluster address to join")
 )
 
+type config struct {
+}
+
 func main() {
 	flag.Parse()
 
 	if *idFlag == 0 {
 		log.Fatal("node ID must no be zero")
-	}
-
-	if *joinFlag && *clusterFlag == "" {
-		log.Fatal("must specific a cluster address to join")
 	}
 
 	nodeConf := node.Conf{
