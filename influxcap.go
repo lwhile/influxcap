@@ -2,9 +2,9 @@ package main
 
 import (
 	"flag"
+	"strings"
 
 	"github.com/lwhile/influxcap/node"
-	"github.com/lwhile/influxcap/service"
 	"github.com/lwhile/log"
 )
 
@@ -28,22 +28,24 @@ func main() {
 	}
 
 	nodeConf := node.Conf{
-		ID:   *idFlag,
-		Join: *joinFlag,
+		ID:    *idFlag,
+		Join:  *joinFlag,
+		Peers: strings.Split(*clusterFlag, ","),
 	}
-
 	node := node.New(&nodeConf)
 	if *joinFlag {
 		node.Peers = []string{*clusterFlag}
 	}
 	node.Start()
 
-	serverConf := service.ServerConf{
-		Port: *portFlag,
-	}
-	server := service.NewServer(&serverConf)
+	// serverConf := service.ServerConf{
+	// 	Port: *portFlag,
+	// }
+	// server := service.NewServer(&serverConf)
 
-	if err := server.Start(); err != nil {
-		log.Fatal(err)
-	}
+	// if err := server.Start(); err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	select {}
 }

@@ -9,8 +9,9 @@ type ServerConf struct {
 
 // Server http request
 type Server struct {
-	conf   *ServerConf
-	server http.Server
+	conf      *ServerConf
+	server    http.Server
+	httpstopC chan struct{}
 }
 
 // NewServer return a Server instance

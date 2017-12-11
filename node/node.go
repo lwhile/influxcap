@@ -1,6 +1,8 @@
 package node
 
 import (
+	"net/http"
+	"net/url"
 	"time"
 
 	"strconv"
@@ -13,6 +15,8 @@ import (
 	"github.com/coreos/etcd/raft/raftpb"
 	"github.com/coreos/etcd/rafthttp"
 	"github.com/lwhile/influxcap/backend"
+	"github.com/lwhile/influxcap/service"
+	"github.com/lwhile/log"
 )
 
 const (
@@ -69,13 +73,15 @@ type Node struct {
 
 	// Net transport
 	transport *rafthttp.Transport
+	httpStopC chan struct{}
+	httpDoneC chan struct{}
 }
 
 // Start a raft node
 func (n *Node) Start() {
 	// prepare raft config
 	peers := make([]raft.Peer, len(n.Peers))
-	for i := range peers {
+	for i := range n.Peers {
 		// The ID must not be zero
 		peers[i] = raft.Peer{ID: uint64(i + 1)}
 	}
@@ -91,6 +97,7 @@ func (n *Node) Start() {
 	if n.Join {
 		peers = nil
 	}
+	log.Info("peers:", peers)
 	n.node = raft.StartNode(&raftConf, peers)
 
 	// TODO: About node status
@@ -110,11 +117,16 @@ func (n *Node) Start() {
 	for i := range n.Peers {
 		if i+1 != n.ID {
 			n.transport.AddPeer(types.ID(i+1), []string{n.Peers[i]})
+			log.Info("*:", []string{n.Peers[i]})
 		}
 	}
 
 	go n.serverRaft()
 	go n.serverChannels()
+}
+
+func (n *Node) stop() {
+	log.Info("stop the node")
 }
 
 func (n *Node) serverChannels() {
@@ -144,12 +156,25 @@ func (n *Node) serverChannels() {
 		case rd := <-n.node.Ready():
 			n.storage.Append(rd.Entries)
 			n.transport.Send(rd.Messages)
+			if ok := n.PublishEntries(rd.CommittedEntries); !ok {
+				n.stop()
+				return
+			}
+			n.node.Advance()
 		}
 	}
 }
 
 func (n *Node) serverRaft() {
-
+	url, err := url.Parse(n.Peers[n.ID-1])
+	if err != nil {
+		log.Fatalf("influxcap: Failed parsing URL (%v)", err)
+	}
+	ln, err := service.NewListener(url.Host, n.httpStopC)
+	if err != nil {
+		log.Fatalf("influxcap: Failed to listen rafthttp (%v)", err)
+	}
+	err = (&http.Server{Handler: n.transport.Handler()}).Serve(ln)
 }
 
 // PublishEntries writes commited log entries to commit channel
