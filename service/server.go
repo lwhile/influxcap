@@ -1,6 +1,7 @@
 package service
 
 import "net/http"
+import "github.com/gorilla/mux"
 
 // ServerConf contain config of a http server
 type ServerConf struct {
@@ -32,4 +33,10 @@ func (s *Server) Start() error {
 // TODO: implement
 func (s *Server) Stop() error {
 	return nil
+}
+
+func router() *mux.Router {
+	r := mux.NewRouter()
+	r.HandleFunc(joinAPI, serveJoin)
+	return r
 }

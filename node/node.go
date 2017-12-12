@@ -40,7 +40,7 @@ type Status string
 
 // Conf is config of a Node
 type Conf struct {
-	ID    int
+	ID    uint64
 	Peers []string
 	Join  bool
 }
@@ -48,14 +48,15 @@ type Conf struct {
 // Node is a influxcap instance,
 // which be implemented as a raft node(Raft interface)
 type Node struct {
-	ID     int      `json:"id"`
+	ID     uint64   `json:"id"`
 	Status Status   `json:"status"`
 	Join   bool     `json:"join"`
 	Peers  []string `json:"peers"`
 
-	proposeC <-chan string
-	commitC  chan<- *string
-	errorC   chan<- error
+	proposeC    <-chan string
+	commitC     chan<- *string
+	confChangeC <-chan raftpb.ConfChange
+	errorC      chan<- error
 
 	stopC   chan struct{}
 	Backend *backend.Influxdb
@@ -114,7 +115,7 @@ func (n *Node) Start() {
 	}
 	n.transport.Start()
 	for i := range n.Peers {
-		if i+1 != n.ID {
+		if uint64(i+1) != n.ID {
 			n.transport.AddPeer(types.ID(i+1), []string{n.Peers[i]})
 		}
 	}
@@ -134,13 +135,24 @@ func (n *Node) serverChannels() {
 
 	// send proposals over raft
 	go func() {
-		for n.proposeC != nil {
+		var confChangeCount uint64
+
+		for n.proposeC != nil && n.confChangeC != nil {
 			select {
 			case prop, ok := <-n.proposeC:
 				if !ok {
 					n.proposeC = nil
 				} else {
+					// blocked  util accepted by raft state machine
 					n.node.Propose(context.TODO(), []byte(prop))
+				}
+			case cc, ok := <-n.confChangeC:
+				if !ok {
+					n.confChangeC = nil
+				} else {
+					confChangeCount++
+					cc.ID = confChangeCount
+					n.node.ProposeConfChange(context.TODO(), cc)
 				}
 			}
 		}

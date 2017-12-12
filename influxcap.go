@@ -2,10 +2,11 @@ package main
 
 import (
 	"flag"
-	"strings"
+	"os"
 
 	"io/ioutil"
 
+	"github.com/levigross/grequests"
 	"github.com/lwhile/influxcap/node"
 	"github.com/lwhile/influxcap/service"
 	"github.com/lwhile/log"
@@ -13,14 +14,12 @@ import (
 )
 
 var (
-	idFlag      = flag.Int("id", 0, "node id")
-	confFlag    = flag.String("conf", "conf.yml", "config file path")
-	joinFlag    = flag.Bool("join", false, "join a influxcap cluster")
-	portFlag    = flag.String("port", "4928", "http listen port")
-	clusterFlag = flag.String("cluster", "", "cluster address to join")
+	confFlag = flag.String("conf", "conf.yml", "config file path")
+	joinFlag = flag.String("join", "", "specific a cluster node to join")
 )
 
 type config struct {
+	ID          uint64 `yaml:"id"`
 	Addr        string `yaml:"addr"`
 	Name        string `yaml:"name"`
 	InfluxdbURL string `yaml:"influxdb_url"`
@@ -34,6 +33,19 @@ func parseConfig(path string) (*config, error) {
 	conf := config{}
 	err = yaml.Unmarshal(b, &conf)
 	return &conf, err
+}
+
+func joinCluster(url string, id uint64, addr string) error {
+	joinData := service.JoinRequest{
+		Addr: addr,
+		ID:   id,
+	}
+	resp, err := grequests.Post(url, &grequests.RequestOptions{JSON: joinData})
+	if err != nil {
+		return err
+	}
+	log.Infof("influxcap: join cluster %s %s", url, resp.String())
+	return nil
 }
 
 func main() {
@@ -50,18 +62,23 @@ func main() {
 	}
 
 	nodeConf := node.Conf{
-		ID:    *idFlag,
-		Join:  *joinFlag,
-		Peers: strings.Split(*clusterFlag, ","),
+		ID: conf.ID,
 	}
+
+	// join a culster
+	if *joinFlag != "" {
+		err := joinCluster(*joinFlag, conf.ID, conf.Addr)
+		if err != nil {
+			log.Fatal(err)
+		}
+		os.Exit(0)
+	}
+
 	node := node.New(&nodeConf)
-	if *joinFlag {
-		node.Peers = []string{*clusterFlag}
-	}
 	node.Start()
 
 	serverConf := service.ServerConf{
-		Port: conf.Addr,
+	//Port: conf.Addr,
 	}
 	server := service.NewServer(&serverConf)
 
